@@ -1,6 +1,6 @@
 # convert_labels
 
-最终解析成json格式如下：---针对一张图一个标注文件
+解析成json格式如下：---针对一张图一个标注文件
 
 ```python
 annotations = 
@@ -25,7 +25,7 @@ annotations =
     }
 ```
 
-最终解析的标注文件格式如下：--针对所有的图片对应一个标注文件(coco数据格式)
+解析标注文件格式如下：--针对所有的图片对应一个标注文件(coco数据格式)
 
 ```python
 annotations =   
