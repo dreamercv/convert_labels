@@ -179,13 +179,44 @@ class Convert_xml_to_txt_txt():
             self.split_xml_to_tow_txt(name, self.org_root, self.dst_target_root, self.dst_in_target_root)
 
 
-if __name__ == '__main__':
-    # 抠图并保存
-    convert_xml = Convert_xml_to_txt_txt(total_names, cutout_names, target_names, in_target_names, org_root,
-                                         dst_target_root,
-                                         dst_in_target_root)
-    convert_xml.main_split_xmls_to_tow_txts()
+class Convert_txt_to_xml():
+    def __init__(self, org_root, dst_root, class_names):
+        self.org_root = org_root
+        self.dst_root = dst_root
+        self.class_names = class_names
 
-    # 不抠图直接保存
-    # convert_xml_txt = Convert_xml_to_txt(org_root, total_objects)
-    # convert_xml_txt.main_xmls_to_txts()
+    def txt_to_xml(self, txt_path, img):
+        img_h, img_w, depth = img.shape
+        annotation = base_function.parse_txt(txt_path, img_w, img_h, depth, txt_path.replace("txt", "jpg"),
+                                             self.class_names)
+        base_function.save_xml_from_txt(self.org_root, self.dst_root, annotation)
+
+    def main_txts_to_xmls(self):
+        if not os.path.exists(self.dst_root):
+            os.mkdir(self.dst_root)
+        for name in os.listdir(self.org_root):
+            if not name.endswith("txt"):
+                continue
+            txt_path = os.path.join(org_root, name)
+            img_path = os.path.join(org_root, name.replace("txt", "jpg"))
+            img = cv2.imread(img_path)
+            if img is None:
+                continue
+            self.txt_to_xml(txt_path, img)
+
+
+if __name__ == '__main__':
+    if xml2txt_txt:
+        # 抠图并保存
+        convert_xml = Convert_xml_to_txt_txt(total_names, cutout_names, target_names, in_target_names, org_root,
+                                             dst_target_root,
+                                             dst_in_target_root)
+        convert_xml.main_split_xmls_to_tow_txts()
+    if xml2txt:
+        # 不抠图直接保存
+        convert_xml_txt = Convert_xml_to_txt(org_root, class_names)
+        convert_xml_txt.main_xmls_to_txts()
+    if txt2xml:
+        # yolo的txt转xml
+        convert_txt = Convert_txt_to_xml(org_root, dst_root, class_names)
+        convert_txt.main_txts_to_xmls()

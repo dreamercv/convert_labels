@@ -48,8 +48,18 @@
 import os, shutil
 import json
 import xml.etree.ElementTree as ET
+from lxml import etree
 
 post_name = ["jpg", "png"]
+
+
+def read_names(name_path):
+    names = []
+    name_info = open(name_path, "r", encoding="utf-8")
+    for name in name_info.readlines():
+        name = name.strip().split()[0]
+        names.append(name)
+    return names
 
 
 def split_train_val_test(root, val_ratio=0.2, test_ratio=0.4):
@@ -159,6 +169,72 @@ def save_txt_from_xml(org_root, dst_root, img_name, target_objects, img_w, img_h
     txt_info.close()
 
 
+def save_xml_from_txt(org_root, dst_root, annotation: dict):
+    image_name = annotation["filename"]
+    width, height, depth = annotation["size"]
+    objects = annotation["objects"]
+    org_image_path = os.path.join(org_root, image_name)
+    dst_image_path = os.path.join(dst_root, image_name)
+    dst_xml_path = os.path.join(dst_root, image_name.split(".")[0] + ".xml")
+    xml_info = open(dst_xml_path, "w", encoding="utf-8")
+
+    root = etree.Element("annotation")
+
+    folder = etree.Element("folder")
+    folder.text = "Unknow"
+
+    filename = etree.Element("filename")
+    filename.text = image_name
+
+    source = etree.Element("source")
+    database = etree.SubElement(source, "database")
+    database.text = "Unknow"
+    annotation = etree.SubElement(source, "annotation")
+    annotation.text = "Unknow"
+    image = etree.SubElement(source, "image")
+    image.text = "Unknow"
+
+    size = etree.Element("size")
+    img_width = etree.SubElement(size, "width")
+    img_width.text = str(width)
+    img_height = etree.SubElement(size, "height")
+    img_height.text = str(height)
+    img_depth = etree.SubElement(size, "depth")
+    img_depth.text = str(depth)
+
+    segmented = etree.Element("segmented")
+    segmented.text = "0"
+
+    root.append(folder), root.append(filename), \
+    root.append(source), root.append(size), root.append(segmented)
+
+    for key, values in objects.items():
+        for value in values:
+            object = etree.Element("object")
+            name = etree.SubElement(object, "name")
+            name.text = key
+            occluded = etree.SubElement(object, "occluded")
+            occluded.text = "0"
+            bndbox = etree.SubElement(object, "bndbox")
+            xmin = etree.SubElement(bndbox, "xmin")
+            xmin.text = str(value[0])
+            ymin = etree.SubElement(bndbox, "ymin")
+            ymin.text = str(value[1])
+            xmax = etree.SubElement(bndbox, "xmax")
+            xmax.text = str(value[2])
+            ymax = etree.SubElement(bndbox, "ymax")
+            ymax.text = str(value[3])
+
+            root.append(object)
+
+    xml = etree.tostring(root, pretty_print=True, encoding="utf-8")
+    xml_info.write(xml.decode("utf-8"))
+    xml_info.close()
+
+    if org_image_path != dst_image_path:
+        shutil.copy(org_image_path, dst_image_path)
+
+
 def parse_xml(xml_path):
     '''
     读取xml文件，将信息封装成json格式
@@ -189,8 +265,8 @@ def parse_xml(xml_path):
     return annotation
 
 
-def parse_txt(txt_path, img_w, img_h, depth, image_name):
-    annotation = {}
+def parse_txt(txt_path, img_w, img_h, depth, image_name, class_names):
+    annotation = dict()
     annotation["filename"] = image_name
     annotation["size"] = [img_w, img_h, depth]
     annotation["objects"] = []
@@ -199,7 +275,7 @@ def parse_txt(txt_path, img_w, img_h, depth, image_name):
     objects = {}
     for line in txt_info.readlines():
         line_info = line.strip().split()
-        box_info = txt2coor(img_w, img_h, line_info)
+        box_info = txt2coor(img_w, img_h, line_info, class_names)
         name, bbox = box_info[0], box_info[1:]
         if name not in objects.keys():
             objects[name] = [bbox]
